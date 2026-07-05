@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ order.id }} - Fernway Market{% endblock %}
+{% block content %}
+
+<div class="narrow-panel">
+  <h1>Order #{{ order.id }}</h1>
+
+  <div class="status-badge status-{{ order.status }}">
+    {% if order.status == "awaiting_payment" %}Awaiting your payment
+    {% elif order.status == "escrowed" %}Payment received &mdash; held in escrow
+    {% elif order.status == "released" %}Released to seller
+    {% elif order.status == "refunded" %}Refunded to you
+    {% elif order.status == "disputed" %}Under dispute review
+    {% endif %}
+  </div>
+
+  {% if order.status == "awaiting_payment" %}
+  <div class="pay-panel">
+    <img src="{{ qr }}" alt="Payment QR code" class="qr-code">
+    <div class="pay-details">
+      <label>Send exactly</label>
+      <div class="pay-amount">₿ {{ "%.8f"|format(order.expected_amount_btc) }}</div>
+      <label>To this address</label>
+      <div class="pay-address">{{ order.deposit_address }}</div>
+      <p class="small-note">Scan the QR code with your wallet app, or copy the address and amount manually. This page checks for your payment automatically -- refresh to update the status.</p>
+      {% if check_failed %}
+      <p class="small-note">Couldn't reach the network to check for your payment just now -- this is usually temporary. Try refreshing in a minute.</p>
+      {% endif %}
+      <a href="{{ url_for('order_status', order_id=order.id) }}" class="btn-secondary">Check payment status</a>
+    </div>
+  </div>
+  {% elif order.status == "escrowed" %}
+  <p>We've received <b>₿ {{ "%.8f"|format(order.received_amount_btc) }}</b> and it's safely held in escrow. The seller has been notified to ship your item. Funds are released to them once you confirm delivery.</p>
+  {% elif order.status == "released" %}
+  <p>This order is complete. Payout transaction: <code>{{ order.payout_txid }}</code></p>
+  {% elif order.status == "refunded" %}
+  <p>This order was refunded. Transaction: <code>{{ order.payout_txid }}</code></p>
+  {% elif order.status == "disputed" %}
+  <p>This order is under review by Fernway support. We'll be in touch at the contact you provided.</p>
+  {% endif %}
+
+  <div class="escrow-note">
+    Order contact: {{ order.buyer_contact }}
+  </div>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Fernway Market{% endblock %}
+{% block content %}
+
+<div class="hero-strip">
+  <h1>Buy and sell in bitcoin, with escrow built in</h1>
+  <p>Every order is held safely until you confirm the goods arrived. Sellers get paid once you're happy.</p>
+</div>
+
+<div class="grid">
+  {% for product in products %}
+  <a href="{{ url_for('product_detail', product_id=product.id) }}" class="card">
+    <div class="card-thumb th-{{ product.category }}">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2A6F6F" stroke-width="1.6">
+        <circle cx="12" cy="12" r="9"/><path d="M9.5 9.2c0-1 1-1.7 2.5-1.7s2.5.6 2.5 1.6-1 1.4-2.5 1.9-2.5.9-2.5 1.9 1 1.6 2.5 1.6 2.5-.7 2.5-1.7"/><path d="M12 6.3v1.2M12 16.5v1.2"/>
+      </svg>
+    </div>
+    <div class="card-cat">{{ product.category }}</div>
+    <p class="card-title">{{ product.title }}</p>
+    <div class="card-seller">sold by {{ product.seller_name }}</div>
+    <div class="price-row">
+      <span class="price">₿ {{ "%.5f"|format(product.price_btc) }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% endblock %}

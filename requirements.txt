@@ -1,0 +1,7 @@
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+bitcoinlib==0.6.15
+qrcode==7.4.2
+Pillow==10.4.0
+requests==2.32.3
+python-dotenv==1.0.1

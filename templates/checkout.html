@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Checkout - Fernway Market{% endblock %}
+{% block content %}
+
+<div class="narrow-panel">
+  <h1>Checkout</h1>
+  <div class="summary-card">
+    <p class="card-title">{{ product.title }}</p>
+    <div class="detail-price">₿ {{ "%.5f"|format(product.price_btc) }}</div>
+  </div>
+
+  <form method="POST" class="form-stack">
+    <label>Contact (email or username, so we can reach you about this order)</label>
+    <input type="text" name="buyer_contact" required placeholder="you@example.com">
+
+    <label>Your refund address (a bitcoin address you control, used only if this order is refunded)</label>
+    <input type="text" name="buyer_refund_address" required placeholder="tb1q...">
+
+    <button type="submit" class="btn-primary full-width">Generate payment address</button>
+  </form>
+
+  <div class="escrow-note">
+    On the next screen you'll get a unique bitcoin address and QR code. Send the exact amount from your own wallet -- Fernway never has access to your wallet or its keys.
+  </div>
+</div>
+
+{% endblock %}

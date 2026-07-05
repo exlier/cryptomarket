@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Admin - Fernway Market{% endblock %}
+{% block content %}
+
+<h1>Orders</h1>
+<p class="small-note">This screen has no login yet -- add authentication before deploying this anywhere real. Anyone who can reach this URL can currently release or refund funds.</p>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>ID</th><th>Product</th><th>Status</th><th>Expected</th><th>Received</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for order in orders %}
+    <tr>
+      <td>#{{ order.id }}</td>
+      <td>{{ order.product.title }}</td>
+      <td><span class="status-badge status-{{ order.status }}">{{ order.status }}</span></td>
+      <td>₿ {{ "%.6f"|format(order.expected_amount_btc) }}</td>
+      <td>₿ {{ "%.6f"|format(order.received_amount_btc or 0) }}</td>
+      <td class="actions-cell">
+        {% if order.status == "escrowed" %}
+        <form method="POST" action="{{ url_for('admin_release', order_id=order.id) }}" style="display:inline">
+          <button class="btn-small btn-release">Release to seller</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_refund', order_id=order.id) }}" style="display:inline">
+          <button class="btn-small btn-refund">Refund buyer</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_dispute', order_id=order.id) }}" style="display:inline">
+          <input type="hidden" name="note" value="Flagged from admin panel">
+          <button class="btn-small btn-dispute">Dispute</button>
+        </form>
+        {% elif order.status == "disputed" %}
+        <form method="POST" action="{{ url_for('admin_refund', order_id=order.id) }}" style="display:inline">
+          <button class="btn-small btn-refund">Refund buyer</button>
+        </form>
+        {% else %}
+        <span class="small-note">{{ order.payout_txid or "" }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

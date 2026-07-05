@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title }} - Fernway Market{% endblock %}
+{% block content %}
+
+<div class="detail-panel">
+  <div class="card-thumb th-{{ product.category }} detail-thumb">
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#2A6F6F" stroke-width="1.4">
+      <circle cx="12" cy="12" r="9"/><path d="M9.5 9.2c0-1 1-1.7 2.5-1.7s2.5.6 2.5 1.6-1 1.4-2.5 1.9-2.5.9-2.5 1.9 1 1.6 2.5 1.6 2.5-.7 2.5-1.7"/><path d="M12 6.3v1.2M12 16.5v1.2"/>
+    </svg>
+  </div>
+  <div class="detail-info">
+    <div class="card-cat">{{ product.category }}</div>
+    <h1>{{ product.title }}</h1>
+    <p class="detail-desc">{{ product.description }}</p>
+    <div class="detail-seller">Sold by <b>{{ product.seller_name }}</b></div>
+    <div class="detail-price">₿ {{ "%.5f"|format(product.price_btc) }}</div>
+    <a href="{{ url_for('checkout', product_id=product.id) }}" class="btn-primary">Buy with escrow protection</a>
+    <div class="escrow-note">
+      Your payment is held by Fernway until you confirm the item arrived. If something goes wrong, you can open a dispute instead of releasing funds.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
