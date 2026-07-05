@@ -1,7 +1,7 @@
 """
 Run this ONCE to create the marketplace's single escrow wallet key.
 
-    python init_wallet.py --network testnet
+    python init_wallet.py --network testnet4
 
 Copy the printed key into your .env file as ESCROW_XPRV. Then also write
 it down somewhere offline (paper, password manager, hardware backup) --
@@ -20,7 +20,9 @@ from bitcoinlib.keys import HDKey
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--network", default="testnet", choices=["testnet", "bitcoin"])
+    parser.add_argument(
+        "--network", default="testnet4", choices=["testnet4", "testnet", "bitcoin"]
+    )
     args = parser.parse_args()
 
     key = HDKey(network=args.network, witness_type="segwit")

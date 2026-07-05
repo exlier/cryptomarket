@@ -29,10 +29,12 @@ def get_wallet():
         return Wallet(name)
     except WalletError:
         xprv = current_app.config["ESCROW_XPRV"]
-        if not xprv:
+        if not xprv or "paste" in xprv or "here" in xprv:
             raise RuntimeError(
-                "ESCROW_XPRV is not set. Run `python init_wallet.py` and "
-                "put the printed key in your .env file before starting the app."
+                "ESCROW_XPRV in your .env file isn't set to a real key yet. "
+                "Run `python init_wallet.py --network testnet4`, then copy "
+                "the ESCROW_XPRV= line it prints into your .env file, "
+                "replacing the placeholder text."
             )
         return Wallet.create(
             name,

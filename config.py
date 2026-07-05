@@ -11,11 +11,17 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Bitcoin network: "testnet" (free, fake coins, use this while building)
-    # or "bitcoin" (mainnet, real money -- only switch once you've tested
-    # the ENTIRE order lifecycle on testnet: pay in, escrow, release, and
-    # a dispute/refund).
-    BTC_NETWORK = os.environ.get("BTC_NETWORK", "testnet")
+    # Bitcoin network to use:
+    #   "testnet4" -- the current, reliable test network (recommended
+    #                 default while building -- faucets actually work)
+    #   "testnet"  -- the old test network (testnet3). Still supported,
+    #                 but its faucets are widely reported as unreliable
+    #                 since 2024, so avoid unless you have a specific
+    #                 reason to use it.
+    #   "bitcoin"  -- mainnet, real money. Only switch to this once
+    #                 you've completed a full pay-in -> escrow -> release
+    #                 -> refund cycle successfully on testnet4.
+    BTC_NETWORK = os.environ.get("BTC_NETWORK", "testnet4")
 
     # The marketplace's ONE escrow wallet, as an extended PRIVATE key
     # (tprv on testnet / xprv on mainnet). This wallet holds every buyer's
