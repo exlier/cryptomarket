@@ -1,56 +1,31 @@
-from datetime import datetime
+import os
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
+class User(db.Model):
+    __tablename__ = 'user'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='Buyer') # Admin, Vendor, Buyer
+
+    # Relationship to products
+    products = db.relationship('Product', backref='vendor', lazy=True, cascade='all, delete-orphan')
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
+
 
 class Product(db.Model):
+    __tablename__ = 'product'
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, default="")
-    price_btc = db.Column(db.Float, nullable=False)
-    seller_name = db.Column(db.String(120), nullable=False)
-    seller_payout_address = db.Column(db.String(120), nullable=False)
-    category = db.Column(db.String(60), default="general")
-
-
-class Order(db.Model):
-    """
-    One order = one address from the marketplace's single escrow wallet.
-
-    The buyer sends BTC there themselves (no auto-pull, no browser
-    extension -- they copy the address or scan the QR from their own
-    wallet app). Funds sit in the marketplace wallet until an admin
-    releases them to the seller, at which point the commission is kept
-    automatically as leftover change on the payout transaction.
-
-    Status lifecycle:
-      awaiting_payment -> address shown, nothing received yet
-      escrowed         -> payment seen with enough confirmations, held
-      released         -> paid out to the seller (commission kept)
-      refunded         -> paid back to the buyer instead
-      disputed         -> flagged, frozen until an admin resolves it
-    """
-
-    id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False)
-
-    buyer_contact = db.Column(db.String(200), nullable=False)
-    buyer_refund_address = db.Column(db.String(120), nullable=False)
-
-    deposit_address = db.Column(db.String(120), nullable=False, unique=True)
-    wallet_key_id = db.Column(db.Integer, nullable=False, unique=True)  # bitcoinlib key_id
-    expected_amount_btc = db.Column(db.Float, nullable=False)
-    received_amount_btc = db.Column(db.Float, default=0.0)
-
-    status = db.Column(db.String(30), default="awaiting_payment")
-    incoming_txid = db.Column(db.String(120))
-    payout_txid = db.Column(db.String(120))
-    commission_btc = db.Column(db.Float)
-    dispute_note = db.Column(db.Text)
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    escrowed_at = db.Column(db.DateTime)
-    released_at = db.Column(db.DateTime)
-
-    product = db.relationship("Product")
+    vendor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    image_filename = db.Column(db.String(256), nullable=True) # Stores relative path only
