@@ -54,5 +54,27 @@
             <li>No products listed yet.</li>
         {% endfor %}
     </ul>
+    
+    <h2>Pending Fulfillment Alerts</h2>
+    {% set pending_orders = [] %}
+    {% for order in all_orders %}
+        {% if order.vendor_id == session['user_id'] and order.vendor_notified and order.escrow_state == 'Paid & Awaiting Fulfillment' %}
+            {% set _ = pending_orders.append(order) %}
+        {% endif %}
+    {% endfor %}
+
+    {% if pending_orders %}
+        <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; border: 1px solid #90caf9; margin-bottom: 1.5rem;">
+            <strong style="color: #1565c0;">Great, payment verified!</strong> 
+            <p style="margin: 0.5rem 0 0 0; color: #333;">Please ship the item(s) for the following order(s):</p>
+            <ul style="margin-top: 0.5rem;">
+                {% for order in pending_orders %}
+                    <li>Order #{{ order.id }} - TxID: <code>{{ order.buyer_provided_tx }}</code></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <p style="color: #666;">No new verified payments awaiting fulfillment.</p>
+    {% endif %}
 </body>
 </html>
