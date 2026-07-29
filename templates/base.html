@@ -1,40 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}Fernway Market{% endblock %}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fernway Market{% endblock %}</title>
+    <link rel="stylesheet" href="static/style.css">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+    </style>
 </head>
 <body>
-
-<header class="topnav">
-  <div class="topnav-inner">
-    <a href="{{ url_for('index') }}" class="logo">fern<span>way</span></a>
-    <div class="topnav-tag">Bitcoin marketplace &middot; escrow-protected</div>
-    <a href="{{ url_for('admin_orders') }}" class="admin-link">Admin</a>
-  </div>
-</header>
-
-<main class="page">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="flash-wrap">
-        {% for category, message in messages %}
-          <div class="flash flash-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
-
-  {% block content %}{% endblock %}
-</main>
-
-<footer class="site-footer">
-  <p>Fernway Market is a demo escrow storefront. Buyers send bitcoin themselves from their own wallet; no funds are ever pulled automatically.</p>
-</footer>
-
+    <header class="topnav">
+        <div class="topnav-inner">
+            <a href="index" class="logo">fern<span>way</span></a>
+            <div class="topnav-tag">Bitcoin marketplace &middot; escrow-protected</div>
+            <a href="admin" class="admin-link">Admin</a>
+        </div>
+    </header>
+    <main class="page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-wrap">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">
+        <p>Fernway Market is a demo escrow storefront. Buyers send bitcoin themselves from their own wallet; no funds are ever pulled automatically.</p>
+    </footer>
 </body>
 </html>
