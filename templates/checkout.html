@@ -1,27 +1,56 @@
-{% extends "base.html" %}
-{% block title %}Checkout - Fernway Market{% endblock %}
-{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Checkout</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; background: #f9f9f9; color: #333; }
+        .card { background: #fff; padding: 2rem; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .qr-container { width: 200px; height: 200px; background: #f0f0f0; margin: 1rem auto; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; }
+        .qr-container img { max-width: 100%; max-height: 100%; display: block; }
+        .wallet-address { background: #e8f5e9; color: #1b5e20; padding: 1rem; word-break: break-all; font-family: monospace; border-radius: 4px; text-align: center; margin: 1rem 0; border: 1px solid #c8e6c9; }
+        input, button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+        button { background: #2e7d32; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 1.5rem; }
+        button:hover { background: #1b5e20; }
+        a { color: #1976d2; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .flash { background: #ffebee; color: #c62828; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; border: 1px solid #ef9a9a; }
+    </style>
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
-<div class="narrow-panel">
-  <h1>Checkout</h1>
-  <div class="summary-card">
-    <p class="card-title">{{ product.title }}</p>
-    <div class="detail-price">₿ {{ "%.5f"|format(product.price_btc) }}</div>
-  </div>
-
-  <form method="POST" class="form-stack">
-    <label>Contact (email or username, so we can reach you about this order)</label>
-    <input type="text" name="buyer_contact" required placeholder="you@example.com">
-
-    <label>Your refund address (a bitcoin address you control, used only if this order is refunded)</label>
-    <input type="text" name="buyer_refund_address" required placeholder="tb1q...">
-
-    <button type="submit" class="btn-primary full-width">Generate payment address</button>
-  </form>
-
-  <div class="escrow-note">
-    On the next screen you'll get a unique bitcoin address and QR code. Send the exact amount from your own wallet -- Fernway never has access to your wallet or its keys.
-  </div>
-</div>
-
-{% endblock %}
+    <h2>Secure Crypto Checkout</h2>
+    <p>Product: <strong>{{ product.name }}</strong></p>
+    <p>Amount Due: <strong>{{ product.price }} BTC</strong></p>
+    
+    <div class="card">
+        <p><strong>Step 1:</strong> Send the exact amount to the master wallet address below:</p>
+        <div class="wallet-address">{{ wallet.master_address }}</div>
+        
+        <p><strong>Step 2:</strong> Scan the local QR code or copy the address:</p>
+        <!-- Strict relative path. No external QR generation APIs used. -->
+        <div class="qr-container">
+            <img src="static/qrs/master_wallet_qr.png" alt="Master Wallet QR Code">
+        </div>
+        
+        <p><strong>Step 3:</strong> Once sent, paste your Transaction ID (TxID) below to verify:</p>
+        <form method="POST" action="checkout/{{ product.id }}">
+            <label for="txid" style="font-weight: bold; font-size: 0.9rem;">Transaction ID (TxID)</label>
+            <input type="text" id="txid" name="txid" placeholder="e.g., a1b2c3d4e5f6..." required pattern="[a-fA-F0-9]{64}" title="Must be a valid 64-character hexadecimal TxID">
+            <button type="submit">Submit Payment Verification</button>
+        </form>
+    </div>
+    
+    <p style="text-align: center; margin-top: 1.5rem;">
+        <a href="index">Cancel and Return to Store</a>
+    </p>
+</body>
+</html>
