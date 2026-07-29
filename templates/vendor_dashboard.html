@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard</title>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; font-family: system-ui, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+        form { background: #1e1e1e; padding: 1.5rem; border-radius: 8px; border: 1px solid #333; }
+        label { display: block; margin-top: 1rem; font-weight: bold; font-size: 0.9rem; }
+        input, textarea, button { width: 100%; margin-top: 0.5rem; padding: 0.75rem; background: #2c2c2c; border: 1px solid #444; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        button { background: #2e7d32; border: none; cursor: pointer; font-weight: bold; margin-top: 1.5rem; }
+        button:hover { background: #1b5e20; }
+        a { color: #64b5f6; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .flash { background: #b71c1c; color: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Vendor Dashboard</h1>
+    <p><a href="index">Back to Storefront</a> | <a href="logout">Logout</a></p>
+    
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" action="dashboard" enctype="multipart/form-data">
+        <label for="name">Product Name</label>
+        <input type="text" id="name" name="name" required>
+        
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="4" required></textarea>
+        
+        <label for="price">Price</label>
+        <input type="number" id="price" name="price" step="0.01" min="0" required>
+        
+        <label for="image">Product Image (PNG, JPG, JPEG only)</label>
+        <input type="file" id="image" name="image" accept=".png, .jpg, .jpeg" required>
+        
+        <button type="submit">Upload Product Securely</button>
+    </form>
+
+    <h2>Your Active Listings</h2>
+    <ul>
+        {% for product in products %}
+            <li><strong>{{ product.name }}</strong> - ${{ product.price }} 
+                <small>(Image: {{ product.image_filename }})</small>
+            </li>
+        {% else %}
+            <li>No products listed yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
