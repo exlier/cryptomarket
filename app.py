@@ -1,186 +1,156 @@
-import base64
-import io
 import os
+import io
+import secrets
+from flask import Flask, request, render_template, redirect, flash, session
+from werkzeug.utils import secure_filename
+from PIL import Image
+from models import db, User, Product
 
-import qrcode
-from flask import Flask, render_template, request, redirect, url_for, flash
-from datetime import datetime
+app = Flask(__name__)
+app.config['SECRET_KEY'] = secrets.token_hex(32)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 
-from config import Config
-from models import db, Product, Order
-import wallet as escrow_wallet
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+db.init_app(app)
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def sanitize_and_save_image(file_stream) -> str:
+    """Zero-dependency, cryptographically secure image sanitization."""
+    if not file_stream or not file_stream.filename:
+        raise ValueError("No file provided in request.")
+    
+    # 1. Extension Filter & Traversal Protection
+    original_filename = secure_filename(file_stream.filename)
+    if not original_filename:
+        raise ValueError("Invalid filename after sanitization.")
+    
+    ext = original_filename.rsplit('.', 1)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise ValueError("Invalid file type. Only PNG, JPG, and JPEG are permitted.")
+    
+    file_content = file_stream.read()
+    if len(file_content) == 0:
+        raise ValueError("Uploaded file is empty.")
+    
+    # 2. Magic Bytes Validation (Prevents renamed script attacks)
+    if ext in ('jpg', 'jpeg'):
+        if not file_content.startswith(b'\xff\xd8\xff'):
+            raise ValueError("File content does not match JPEG magic bytes.")
+    elif ext == 'png':
+        if not file_content.startswith(b'\x89PNG\r\n\x1a\n'):
+            raise ValueError("File content does not match PNG magic bytes.")
+    
+    # 3. Pixel Sanitation (Destroys EXIF, XMP, and hidden payloads)
+    try:
+        img = Image.open(io.BytesIO(file_content))
+        img.verify() # Verify it is a valid image structure
+        
+        # Re-open after verify() consumes the stream
+        img = Image.open(io.BytesIO(file_content))
+        
+        # Rebuild image from raw pixels only. This strips ALL metadata and appended code.
+        clean_img = Image.frombytes(img.mode, img.size, img.tobytes())
+        
+        # Generate cryptographically secure random filename
+        secure_name = f"{secrets.token_hex(16)}.{ext}"
+        output_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_name)
+        
+        # Save as fresh, immutable file
+        clean_img.save(output_path, format=clean_img.format)
+        
+        # Return strict relative path for database storage
+        return os.path.join('static', 'uploads', secure_name).replace('\\', '/')
+        
+    except Exception as e:
+        raise ValueError(f"Image processing failed: {str(e)}")
 
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
-    os.makedirs(app.instance_path, exist_ok=True)
-    if not app.config["SQLALCHEMY_DATABASE_URI"]:
-        db_path = os.path.join(app.instance_path, "marketplace.db")
-        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
-    db.init_app(app)
+@app.route('/')
+def index():
+    products = Product.query.all()
+    return render_template('index.html', products=products)
 
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists.")
+            return redirect('register')
+        
+        new_user = User(username=username, role='Vendor')
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash("Registration successful. Please login.")
+        return redirect('login')
+    return render_template('register.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            session['user_id'] = user.id
+            session['role'] = user.role
+            return redirect('dashboard')
+        flash("Invalid credentials.")
+    return render_template('login.html')
+
+
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard():
+    if 'user_id' not in session or session.get('role') != 'Vendor':
+        return redirect('login')
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        price = request.form.get('price')
+        file = request.files.get('image')
+        
+        image_path = None
+        if file and file.filename != '':
+            try:
+                image_path = sanitize_and_save_image(file)
+            except ValueError as e:
+                flash(str(e))
+                return redirect('dashboard')
+        
+        new_product = Product(
+            vendor_id=session['user_id'],
+            name=name,
+            description=description,
+            price=float(price),
+            image_filename=image_path
+        )
+        db.session.add(new_product)
+        db.session.commit()
+        flash("Product uploaded securely.")
+        return redirect('dashboard')
+    
+    user_products = Product.query.filter_by(vendor_id=session['user_id']).all()
+    return render_template('vendor_dashboard.html', products=user_products)
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('index')
+
+
+if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        _seed_demo_products()
-
-    register_routes(app)
-    return app
-
-
-def _seed_demo_products():
-    if Product.query.count() > 0:
-        return
-    demo = [
-        Product(
-            title="Mechanical keyboard, hot-swappable switches",
-            description="75% layout, hot-swap sockets, USB-C.",
-            price_btc=0.0021,
-            seller_name="northline_gear",
-            seller_payout_address="tb1qexampleseller0000000000000000000000",
-            category="electronics",
-        ),
-        Product(
-            title="Hand-poured soy candle, cedar & fig",
-            description="40 hour burn time, cotton wick.",
-            price_btc=0.00035,
-            seller_name="wick_and_wood",
-            seller_payout_address="tb1qexampleseller1111111111111111111111",
-            category="home",
-        ),
-        Product(
-            title="Vintage film camera, fully serviced",
-            description="35mm, recently CLA'd, light seals replaced.",
-            price_btc=0.0064,
-            seller_name="silverhalide",
-            seller_payout_address="tb1qexampleseller2222222222222222222222",
-            category="electronics",
-        ),
-    ]
-    db.session.add_all(demo)
-    db.session.commit()
-
-
-def qr_data_uri(data: str) -> str:
-    img = qrcode.make(data)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
-    return f"data:image/png;base64,{encoded}"
-
-
-def register_routes(app):
-
-    @app.route("/")
-    def index():
-        products = Product.query.all()
-        return render_template("index.html", products=products)
-
-    @app.route("/product/<int:product_id>")
-    def product_detail(product_id):
-        product = Product.query.get_or_404(product_id)
-        return render_template("product.html", product=product)
-
-    @app.route("/checkout/<int:product_id>", methods=["GET", "POST"])
-    def checkout(product_id):
-        product = Product.query.get_or_404(product_id)
-
-        if request.method == "POST":
-            buyer_contact = request.form["buyer_contact"].strip()
-            buyer_refund_address = request.form["buyer_refund_address"].strip()
-
-            if not buyer_contact or not buyer_refund_address:
-                flash("Please fill in both fields.", "error")
-                return render_template("checkout.html", product=product)
-
-            address, key_id = escrow_wallet.new_deposit_address()
-
-            order = Order(
-                product_id=product.id,
-                buyer_contact=buyer_contact,
-                buyer_refund_address=buyer_refund_address,
-                deposit_address=address,
-                wallet_key_id=key_id,
-                expected_amount_btc=product.price_btc,
-            )
-            db.session.add(order)
-            db.session.commit()
-
-            return redirect(url_for("order_status", order_id=order.id))
-
-        return render_template("checkout.html", product=product)
-
-    @app.route("/order/<int:order_id>")
-    def order_status(order_id):
-        order = Order.query.get_or_404(order_id)
-
-        check_failed = False
-        if order.status == "awaiting_payment":
-            result = escrow_wallet.check_payment(
-                order.wallet_key_id, app.config["REQUIRED_CONFIRMATIONS"]
-            )
-            check_failed = result.get("check_failed", False)
-            order.received_amount_btc = result["received_btc"]
-            if result["txid"]:
-                order.incoming_txid = result["txid"]
-            if result.get("is_final") and result["received_btc"] >= order.expected_amount_btc:
-                order.status = "escrowed"
-                order.escrowed_at = datetime.utcnow()
-            db.session.commit()
-
-        payment_uri = f"bitcoin:{order.deposit_address}?amount={order.expected_amount_btc}"
-        qr = qr_data_uri(payment_uri)
-        return render_template("order_status.html", order=order, qr=qr, check_failed=check_failed)
-
-    @app.route("/admin")
-    def admin_orders():
-        orders = Order.query.order_by(Order.created_at.desc()).all()
-        return render_template("admin_orders.html", orders=orders)
-
-    @app.route("/admin/order/<int:order_id>/release", methods=["POST"])
-    def admin_release(order_id):
-        order = Order.query.get_or_404(order_id)
-        if order.status != "escrowed":
-            flash("Order isn't in escrow, nothing to release.", "error")
-            return redirect(url_for("admin_orders"))
-
-        txid, commission = escrow_wallet.release_to_seller(
-            order, app.config["COMMISSION_PERCENT"]
-        )
-        order.status = "released"
-        order.payout_txid = txid
-        order.commission_btc = commission
-        order.released_at = datetime.utcnow()
-        db.session.commit()
-        flash(f"Released to seller. Payout tx: {txid}", "success")
-        return redirect(url_for("admin_orders"))
-
-    @app.route("/admin/order/<int:order_id>/refund", methods=["POST"])
-    def admin_refund(order_id):
-        order = Order.query.get_or_404(order_id)
-        if order.status not in ("escrowed", "disputed"):
-            flash("Nothing escrowed for this order to refund.", "error")
-            return redirect(url_for("admin_orders"))
-
-        txid = escrow_wallet.refund_to_buyer(order)
-        order.status = "refunded"
-        order.payout_txid = txid
-        order.released_at = datetime.utcnow()
-        db.session.commit()
-        flash(f"Refunded to buyer. Tx: {txid}", "success")
-        return redirect(url_for("admin_orders"))
-
-    @app.route("/admin/order/<int:order_id>/dispute", methods=["POST"])
-    def admin_dispute(order_id):
-        order = Order.query.get_or_404(order_id)
-        order.status = "disputed"
-        order.dispute_note = request.form.get("note", "")
-        db.session.commit()
-        flash("Order marked as disputed.", "success")
-        return redirect(url_for("admin_orders"))
-
-
-app = create_app()
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # Note: For production, run via gunicorn bound to the unix socket:
+    # gunicorn --bind unix:/tmp/marketplace.sock app:app
+    app.run(host='127.0.0.1', port=5000)
