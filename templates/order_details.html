@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order #{{ order.id }} Details</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 700px; margin: 2rem auto; padding: 1rem; background: #f9f9f9; color: #333; }
+        .card { background: #fff; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 1.5rem; }
+        .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: bold; font-size: 0.9rem; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-dispatched { background: #cce5ff; color: #004085; }
+        .status-released { background: #d4edda; color: #155724; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin-top: 1rem; font-size: 0.9rem; }
+        .btn { display: inline-block; padding: 0.75rem 1.5rem; background: #2e7d32; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; border: none; cursor: pointer; margin-top: 1rem; }
+        .btn:hover { background: #1b5e20; }
+        a { color: #1976d2; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <p><a href="dashboard">← Back to Dashboard</a></p>
+    
+    <div class="card">
+        <h2>Order #{{ order.id }}</h2>
+        <p><strong>Product ID:</strong> {{ order.product_id }}</p>
+        <p><strong>Amount:</strong> {{ order.amount_crypto }} BTC</p>
+        <p><strong>State:</strong> 
+            <span class="status-badge 
+                {% if order.escrow_state == 'Delivered & Released' %}status-released
+                {% elif order.escrow_state == 'Dispatched / In Transit' %}status-dispatched
+                {% else %}status-pending{% endif %}">
+                {{ order.escrow_state }}
+            </span>
+        </p>
+        
+        {% if order.dispatched_at %}
+            <p><strong>Dispatched On:</strong> {{ order.dispatched_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+            
+            {% if order.escrow_state in ['Paid & Awaiting Fulfillment', 'Dispatched / In Transit'] %}
+                <div class="warning-box">
+                    <strong>⚠️ Auto-Release Notice:</strong><br>
+                    To protect the vendor from abandoned accounts, funds in escrow will be 
+                    <strong>automatically released</strong> to the vendor's ledger exactly 14 days 
+                    after the dispatch date if no dispute is filed. 
+                    <br><br>
+                    <em>Auto-release date: {{ (order.dispatched_at + timedelta(days=14)).strftime('%Y-%m-%d %H:%M UTC') }}</em>
+                </div>
+                
+                {% if session.get('user_id') == order.buyer_id %}
+                    <form method="POST" action="confirm_receipt/{{ order.id }}" style="margin-top: 1rem;">
+                        <p>I confirm I have received the item in satisfactory condition.</p>
+                        <button type="submit" class="btn">Confirm Receipt & Release Funds Now</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        {% else %}
+            <p><em>Vendor has not yet marked this order as dispatched.</em></p>
+        {% endif %}
+    </div>
+</body>
+</html>
