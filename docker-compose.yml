@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  web:
+    build: ./app
+    volumes:
+      - db_data:/app/data
+      - uploads_data:/app/static/uploads
+      - sockets_data:/tmp/sockets
+    environment:
+      - FLASK_ENV=production
+    networks:
+      - internal
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - uploads_data:/var/www/marketplace/static/uploads:ro
+      - sockets_data:/tmp/sockets:ro
+    networks:
+      - internal
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  tor:
+    build: ./tor
+    volumes:
+      - tor_data:/var/lib/tor
+    networks:
+      - internal
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  uploads_data:
+  sockets_data:
+  tor_data:
+
+networks:
+  internal:
+    driver: bridge
