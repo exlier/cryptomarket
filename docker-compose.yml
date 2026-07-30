@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   web:
     build: ./app
@@ -8,7 +7,7 @@ services:
       - uploads_data:/app/static/uploads
       - sockets_data:/tmp/sockets
     environment:
-      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY}
     networks:
       - internal
     restart: unless-stopped
