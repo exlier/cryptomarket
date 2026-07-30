@@ -1,0 +1,4 @@
+DataDirectory /var/lib/tor
+HiddenServiceDir /var/lib/tor/hidden_service/
+# Route port 80 of the .onion address to the nginx container on port 80
+HiddenServicePort 80 nginx:80
